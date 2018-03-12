@@ -18,27 +18,17 @@ version: "3"
 volumes:
   recordings:
 
-networks:
-  backend:
-
 services:
   data:
     image: seresearch/opendlv-gallery-comma.ai:2016-06-08--11-46-01
     volumes:
       - recordings:/opt/comma.ai-dataset
 
-  replay:
-    image: chrberger/cluon
-    networks:
-      - backend
-    volumes:
-      - recordings:/opt/comma.ai-dataset
-    command: cluon-replay --cid=111 /opt/comma.ai-dataset/2016-06-08--11-46-01.rec
-
   ui:
     image: seresearch/opendlv-gallery-comma.ai:ui
     ports:
       - 8080:8080
-    networks:
-      - backend
+    volumes:
+      - recordings:/opt/comma.ai-dataset
+    command: /opt/comma.ai-dataset/2016-06-08--11-46-01.rec
 
