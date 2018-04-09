@@ -9,16 +9,29 @@
 <!--    
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 -->
-    <link rel="stylesheet" href="bootstrap.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link type="text/css" rel="stylesheet" href="bootstrap.min.css">
+    <link type="text/css" rel="stylesheet" href="font-awesome.min.css">
+    <link type="text/css" rel="stylesheet" href="style.css">
+    <link type="text/css" rel="stylesheet" href="playback.css"/>
   </head>
 
   <body>
     <div class="pos-f-t">
       <div class="collapse" id="navbarToggleExternalContent">
         <div class="bg-dark p-4">
-          <h4 class="text-white">libcluon signal viewer</h4>
-          <button id="pause" type="button" class="btn btn-primary">Pause</button>
+          <h5 class="text-white">OpenDLV Gallery Viewer</h4>
+<!--
+-          <button id="pause" type="button" class="btn btn-primary">Pause</button>
+-->
+        <table style="width: 80%;">
+          <tbody>
+            <tr>
+              <td><button id="remotepause" type="button" class="btn btn-primary"><i id="connectionStatusSymbol" class="fa fa-pause-circle" style="font-size:30px;color:#555"></i></button></td>
+              <td><input type="range" min="1" max="100" value="50" class="slider" id="playbackrange"></td>
+            </tr>
+          </tbody>
+        </table>
+
         </div>
       </div>
       <nav class="navbar navbar-dark bg-dark">
@@ -28,7 +41,9 @@
       </nav>
     </div>
   
-  
+
+    <div class="spinner" id="loadingIcon"></div>
+
     <table id="dataView" class="table">
       <tr>
         <th class="signal-type">Type</th>
@@ -46,16 +61,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
 -->
+
     <script type="text/javascript" src="jquery-3.2.1.slim.min.js"></script>
     <script type="text/javascript" src="popper.min.js"></script>
     <script type="text/javascript" src="moment-with-locales.min.js"></script>
     <script type="text/javascript" src="Chart.js"></script>
     <script type="text/javascript" src="bootstrap.min.js"></script>
 
-    <script type="text/javascript" src="libcluon-0.0.47.js"></script>
-    <script type="text/javascript" src="libcluon-viewer-0.01.js"></script>
+    <script type="text/javascript" src="libcluon-0.0.67.js"></script>
+    <script type="text/javascript" src="libcluon-viewer-0.0.2.js"></script>
   </body>
 </html>
-
-
 
