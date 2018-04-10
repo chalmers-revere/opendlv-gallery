@@ -24,7 +24,7 @@ services:
       - data
     image: seresearch/opendlv-gallery-comma.ai:ui
     ports:
-      - 8080:8080
+      - "8080:8080"
     volumes_from:
       - data
     command: /opt/comma.ai-dataset/2016-01-31--19-19-25.rec
