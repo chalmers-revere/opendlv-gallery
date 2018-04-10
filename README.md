@@ -2,7 +2,7 @@
 
 This repository contains Docker-encapsulated datasets and OpenDLV-powered replay/visualization environments for replay in modern web-browsers.
 
-You can find datasets listed below that can be played back using Play-with-Docker.
+You can find datasets listed below that can be played back using Play-with-Docker:
 
 ![play-with-docker](https://raw.githubusercontent.com/chalmers-revere/opendlv-gallery/master/play-with-docker-screencast.gif)
 
