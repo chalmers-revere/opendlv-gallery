@@ -23,9 +23,10 @@ services:
     depends_on:
       - data
     image: seresearch/opendlv-gallery-comma.ai:ui
+    network_mode: host
     ports:
       - "8080:8080"
     volumes_from:
       - data
-    command: /opt/comma.ai-dataset/2016-01-31--19-19-25.rec
+    command: --cid=123 --stdout /opt/comma.ai-dataset/2016-01-31--19-19-25.rec
 
