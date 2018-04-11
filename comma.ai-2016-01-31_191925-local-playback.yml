@@ -23,7 +23,7 @@ services:
     depends_on:
       - data
     image: seresearch/opendlv-gallery-comma.ai:ui
-    network_mode: host
+    network_mode: bridge
     ports:
       - "8080:8080"
     volumes_from:
