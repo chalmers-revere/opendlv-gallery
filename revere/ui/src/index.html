@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--
+        <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
+        <link type="text/css" rel="stylesheet" href="https://unpkg.com/maptalks/dist/maptalks.css"/>
+
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/88/three.min.js"></script>
+        <script type="text/javascript" src='http://threejs.org/examples/js/controls/OrbitControls.js'></script>
+
+        <script type="text/javascript" src="//cdn.rawgit.com/Mikhus/canvas-gauges/gh-pages/download/2.1.4/all/gauge.min.js"></script>
+        <script type="text/javascript" src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/smoothie/1.32.0/smoothie.min.js"></script>
+-->
+        <link type="text/css" rel="stylesheet" href="font-awesome.min.css"/>
+        <link type="text/css" rel="stylesheet" href="maptalks.css"/>
+
+        <script type="text/javascript" src="three.min.js"></script>
+        <script type="text/javascript" src="OrbitControls.js"></script>
+
+        <script type="text/javascript" src="gauge.min.js"></script>
+        <script type="text/javascript" src="maptalks.min.js"></script>
+        <script type="text/javascript" src="smoothie.min.js"></script>
+
+        <script src="libcluon-0.0.97.js"></script>
+
+        <style>
+            body, html {
+                height: 100%;
+                margin: 0;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            .bg {
+                background-image: url("background.jpg");
+                height: 100%; 
+                background-position: center;
+                background-repeat: no-repeat;
+                background-size: cover;
+            }
+
+            .main {
+              float:left;
+              width:70%;
+              padding:2px 2px;
+              margin-top:10px;
+              margin-left:10px;
+            }
+
+            .right {
+              float:right;
+              width:20%;
+              padding:2px 2px;
+              margin-top:10px;
+              margin-left:10px;
+            }
+
+            .element {
+              margin-top:10px;
+              margin-left:10px;
+              box-shadow: 3px 3px 3px #aaaaaa;
+            }
+
+            .elementNoShadow {
+            }
+
+            .module > header {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              width: 100%;
+              padding: 20px 10px;
+              background: inherit;
+              background-attachment: fixed;
+            }
+            .module > header > h1 {
+              margin: 0;
+              font-family: Awesome;
+              color: white;
+              position: relative;
+              z-index: 1;
+            }
+
+            div.smoothie-chart-tooltip {
+              background: #444;
+              padding: 1em;
+              margin-top: 20px;
+              font-family: Awesome;
+              color: white;
+              font-size: 10px;
+              pointer-events: none;
+            }
+
+            #map { width: 220px; height: 220px;  }
+
+            ul.fancytree-container {
+              margin: 4px;
+              width: 300px;
+              height: 200px;
+              overflow: auto;
+              position: relative;
+            }
+
+            @media only screen and (max-width:800px) {
+              /* For tablets: */
+              .main {
+                width:80%;
+              }
+              .right {
+                width:100%;
+              }
+            }
+            @media only screen and (max-width:500px) {
+              /* For mobile phones: */
+              .main, .right {
+                width:100%;
+              }
+            }
+        </style>
+    </head>
+
+<body style="font-family:Awesome;">
+
+<div class="bg">
+    <div class="module">
+        <header>
+            <h1>vehicle view</h1>
+        </header>
+    </div>
+
+    <div>
+        <div style="overflow:auto">
+            <div class="main">
+                <div class="elementNoShadow">
+                    <center>
+                        <div id="ego-3dview"></div>
+                    </center>
+                </div>
+            </div>
+
+            <div class="right">
+                <div class="element">
+                    <center>
+                        <i id="connectionStatusSymbol" class="fa fa-taxi" style="font-size:30px;color:#555"></i>
+                        <div id="connectionStatusText">disconnected</div>
+                    </center>
+                </div>
+
+                <div class="element">
+                    <center>
+                    <canvas id="speed"></canvas>
+                    </center>
+                </div>
+
+                <div class="element">
+                    <center>
+                    <div id="map"></div>
+                    </center>
+                </div>
+
+                <div class="element">
+                    <center>
+                    <canvas id="cpu-load" width="220" height="100"></canvas>
+                    </center>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    var scene = new THREE.Scene();
+
+    var renderer = new THREE.WebGLRenderer();
+    renderer.setSize( 700, 500 );
+    renderer.setClearColor(new THREE.Color(0xaaaaaa));
+    document.getElementById('ego-3dview').appendChild(renderer.domElement);
+
+    var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+    camera.position.y = 5;
+    camera.position.z = 5;
+    camera.lookAt (new THREE.Vector3(0, 0, 0));
+    scene.add (camera);
+
+
+    var controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+
+    var pointLight = new THREE.PointLight(0xffffff);
+    pointLight.position.set (0, 20, 20);
+    scene.add (pointLight);
+    
+    var ambientLight = new THREE.AmbientLight (0xaaaaaa);
+    scene.add(ambientLight);
+
+
+    var gridXZ = new THREE.GridHelper(50, 50, 0xff0000, 0xffffff);
+    scene.add(gridXZ);
+
+
+    // Point Cloud for VLP16:
+    {
+        var geometry_pointcloud_vlp16 = new THREE.BufferGeometry();
+        var MAX_POINTS_vlp16 = 63000;
+        var positions_vlp16 = new Float32Array(MAX_POINTS_vlp16 * 3); // 3 vertices per point
+        positions_vlp16.fill(0);
+        geometry_pointcloud_vlp16.addAttribute('position', new THREE.BufferAttribute(positions_vlp16, 3));
+        var material_pointcloud_vlp16 = new THREE.PointsMaterial( { color: 0x0000ff, size: 0.02 } );
+        var particles_pointcloud_vlp16 = new THREE.Points( geometry_pointcloud_vlp16, material_pointcloud_vlp16 );
+        scene.add( particles_pointcloud_vlp16 );
+    }
+
+    // Point Cloud for HDL32e_12 layers:
+    {
+        var geometry_pointcloud_hdl32e_12 = new THREE.BufferGeometry();
+        var MAX_POINTS_hdl32e_12 = 63000;
+        var positions_hdl32e_12 = new Float32Array(MAX_POINTS_hdl32e_12 * 3); // 3 vertices per point
+        positions_hdl32e_12.fill(0);
+        geometry_pointcloud_hdl32e_12.addAttribute('position', new THREE.BufferAttribute(positions_hdl32e_12, 3));
+        var material_pointcloud_hdl32e_12 = new THREE.PointsMaterial( { color: 0x0000ff, size: 0.02 } );
+        var particles_pointcloud_hdl32e_12 = new THREE.Points( geometry_pointcloud_hdl32e_12, material_pointcloud_hdl32e_12 );
+        scene.add( particles_pointcloud_hdl32e_12 );
+    }
+
+    // Point Cloud for HDL32e_11 layers:
+    {
+        var geometry_pointcloud_hdl32e_11 = new THREE.BufferGeometry();
+        var MAX_POINTS_hdl32e_11 = 63000;
+        var positions_hdl32e_11 = new Float32Array(MAX_POINTS_hdl32e_11 * 3); // 3 vertices per point
+        positions_hdl32e_11.fill(0);
+        geometry_pointcloud_hdl32e_11.addAttribute('position', new THREE.BufferAttribute(positions_hdl32e_11, 3));
+        var material_pointcloud_hdl32e_11 = new THREE.PointsMaterial( { color: 0x0000ff, size: 0.02 } );
+        var particles_pointcloud_hdl32e_11 = new THREE.Points( geometry_pointcloud_hdl32e_11, material_pointcloud_hdl32e_11 );
+        scene.add( particles_pointcloud_hdl32e_11 );
+    }
+
+    // Point Cloud for HDL32e_9 layers:
+    {
+        var geometry_pointcloud_hdl32e_9 = new THREE.BufferGeometry();
+        var MAX_POINTS_hdl32e_9 = 63000;
+        var positions_hdl32e_9 = new Float32Array(MAX_POINTS_hdl32e_9 * 3); // 3 vertices per point
+        positions_hdl32e_9.fill(0);
+        geometry_pointcloud_hdl32e_9.addAttribute('position', new THREE.BufferAttribute(positions_hdl32e_9, 3));
+        var material_pointcloud_hdl32e_9 = new THREE.PointsMaterial( { color: 0x0000ff, size: 0.02 } );
+        var particles_pointcloud_hdl32e_9 = new THREE.Points( geometry_pointcloud_hdl32e_9, material_pointcloud_hdl32e_9 );
+        scene.add( particles_pointcloud_hdl32e_9 );
+    }
+
+    var animate = function () {
+        requestAnimationFrame( animate );
+        renderer.render(scene, camera);
+    };
+
+    animate();
+</script>
+
+
+<script>
+var gaugePS = new RadialGauge({
+    renderTo: 'speed',
+   units: "kph",
+    minValue: 0,
+    maxValue: 220,
+    majorTicks: [
+        "0",
+        "20",
+        "40",
+        "60",
+        "80",
+        "100",
+        "120",
+        "140",
+        "160",
+        "180",
+        "200",
+        "220"
+    ],
+    minorTicks: 2,
+    strokeTicks: true,
+    highlights: [
+        {
+            "from": 160,
+            "to": 220,
+            "color": "rgba(200, 50, 50, .75)"
+        }
+    ],
+    colorPlate: "#fff",
+    borderShadowWidth: 0,
+    borders: false,
+    needleType: "arrow",
+    needleWidth: 2,
+    needleCircleSize: 7,
+    needleCircleOuter: true,
+    needleCircleInner: false,
+    animationDuration: 1500,
+    animationRule: "linear"
+});
+gaugePS.draw();
+//gaugePS.value = "510";
+</script>
+
+
+<script>
+    var dataLine = new TimeSeries();
+
+    var chart = new SmoothieChart({millisPerPixel:100,grid:{millisPerLine:3000,fillStyle:'#eee'},tooltip:true,maxValue:1000.0*1000.0,minValue:0}),
+        canvas = document.getElementById('cpu-load'),
+        line1 = dataLine;
+
+        chart.addTimeSeries(line1, {lineWidth:2,strokeStyle:'rgba(20,20,20,0.55)',fillStyle:'rgba(123,41,0,0.30)'});
+        chart.streamTo(canvas, 1237);
+
+    // Add to SmoothieChart
+    chart.addTimeSeries(dataLine);
+</script>
+
+
+<script>
+var map = new maptalks.Map("map",{
+    center : [-118.150127,33.779397],
+    pitch : 0,
+    bearing : 0,
+    zoom : 14,
+    centerCross: true,
+    attribution : {
+      'content' : '<span style="padding:4px"><font size=1>&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a></font> </span>'
+    },
+// a custom version of default web-mercator spatial reference
+        // map's spatial reference definition
+        spatialReference : {
+          projection : 'EPSG:3857', // geo projection, can be a string or a function
+          resolutions : [           // map's zoom levels and resolutions
+            156543.03392804097,
+            78271.51696402048,
+            9135.75848201024,
+            19567.87924100512,
+            9783.93962050256,
+            4891.96981025128,
+            2445.98490512564,
+            1222.99245256282,
+            611.49622628141,
+            305.748113140705,
+            152.8740565703525,
+            76.43702828517625,
+            38.21851414258813,
+            19.109257071294063,
+            9.554628535647032,
+            4.777314267823516,
+            2.388657133911758,
+            1.194328566955879,
+            0.5971642834779395,
+            0.29858214173896974,
+            0.1492910709,
+            0.07464553543,
+            0.03732276771
+          ],
+          fullExtent : {         // map's full extent
+            'top': 6378137 * Math.PI,
+            'left': -6378137 * Math.PI,
+            'bottom': -6378137 * Math.PI,
+            'right': 6378137 * Math.PI
+          }
+        },
+        baseLayer : new maptalks.TileLayer('base',{
+          urlTemplate: 'http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+          subdomains: ['a','b','c','d'],
+          tileSystem : [1, -1, -20037508.34, 20037508.34], // tile system
+          minZoom : 1,
+          maxZoom : 23
+        })
+});
+</script>
+
+
+<script>
+    var GL_position_index_vlp16 = 0;
+    var GL_position_index_hdl32e_12 = 0;
+    var GL_position_index_hdl32e_11 = 0;
+    var GL_position_index_hdl32e_9 = 0;
+    // Setup look-up table for interleaved vertical layers.
+    var verticalAngles16 = [-15.0, -13.0, -11.0, -9.0, -7.0, -5.0, -3.0, -1.0, 1.0, 3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0];
+    var verticalAngles12 = [-30.67, -29.33, -25.33, -21.32, -17.32, -13.31, -9.31, -5.3, -1.3, 2.71, 6.71, 10.72];
+    var verticalAngles11 = [-28.0, -26.66, -22.66, -18.65, -14.65, -10.64, -6.64, -2.63, 1.37, 5.38, 9.38];
+    var verticalAngles9 = [-23.99, -19.99, -15.98, -11.98, -7.97, -3.97, 0.04, 4.04, 8.05];
+
+    var __libcluon = libcluon();
+
+    function getResourceFrom(url) {
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.open("GET", url, false /*asynchronous request*/);
+        xmlHttp.send(null);
+        return xmlHttp.responseText;
+    }
+
+    if ("WebSocket" in window) {
+        var ws = new WebSocket("ws://" + window.location.host + "/");
+        ws.binaryType = 'arraybuffer';
+
+        ws.onopen = function() {
+            console.log("Connected...");
+            document.getElementById("connectionStatusSymbol").style.color = "#3CB371";
+            document.getElementById("connectionStatusText").style.color = "#3CB371";
+            document.getElementById("connectionStatusText").innerHTML = "connected";
+            var odvd = getResourceFrom("opendlv-standard-message-set-v0.9.1.odvd");
+            console.log("Loaded " + __libcluon.setMessageSpecification(odvd) + " messages from specification.");
+        };
+
+
+        var oldTimeStamp = 0;
+        ws.onmessage = function(evt) {
+            // This method will pass an OpenDaVINCI container to libcluon to parse it into a JSON object using the provided message specification.
+            var data = JSON.parse(__libcluon.decodeEnvelopeToJSON(evt.data));
+
+            if (data.dataType > 0) {
+                if (oldTimeStamp == 0) {
+                    oldTimeStamp = data.sampleTimeStamp.seconds * 1000 * 1000 + data.sampleTimeStamp.microseconds;
+                }
+                else {
+                    var currentTimeStamp = data.sampleTimeStamp.seconds * 1000 * 1000 + data.sampleTimeStamp.microseconds;
+                    dataLine.append(new Date().getTime(), Math.abs(currentTimeStamp - oldTimeStamp));
+                    oldTimeStamp = currentTimeStamp;
+                }
+            }
+
+            if (data.dataType == 1046) {
+                gaugePS.value = data.opendlv_proxy_GroundSpeedReading.groundSpeed * 3.6;
+            }
+            if (data.dataType == 19) {
+                var c = [data.opendlv_proxy_GeodeticWgs84Reading.longitude, data.opendlv_proxy_GeodeticWgs84Reading.latitude];
+                map.setCenter(c);
+            }
+            if (data.dataType == 49) {
+                // CompactPointCloud
+                var distances = window.atob(data.opendlv_proxy_PointCloudReading.distances);
+
+                var startAzimuth = data.opendlv_proxy_PointCloudReading.startAzimuth;
+                var endAzimuth = data.opendlv_proxy_PointCloudReading.endAzimuth;
+                var entriesPerAzimuth = data.opendlv_proxy_PointCloudReading.entriesPerAzimuth;
+                var numberOfPoints = distances.length / 2;
+                var numberOfAzimuths = numberOfPoints / entriesPerAzimuth;
+                var azimuthIncrement = (endAzimuth - startAzimuth) / numberOfAzimuths;
+
+                var GL_positions_vlp16 = particles_pointcloud_vlp16.geometry.attributes.position.array;
+                var GL_positions_hdl32e_12 = particles_pointcloud_hdl32e_12.geometry.attributes.position.array;
+                var GL_positions_hdl32e_11 = particles_pointcloud_hdl32e_11.geometry.attributes.position.array;
+                var GL_positions_hdl32e_9 = particles_pointcloud_hdl32e_9.geometry.attributes.position.array;
+
+                // VLP16 sends 16 layers,
+                if (16 == entriesPerAzimuth) {
+                    GL_positions_vlp16.fill(0);
+                    GL_position_index_vlp16 = 0;
+                }
+                else if (12 == entriesPerAzimuth) {
+                    // HDL32e sends the sequence 12, 11, 9 layers.
+                    GL_positions_hdl32e_12.fill(0);
+                    GL_position_index_hdl32e_12 = 0;
+                }
+                else if (11 == entriesPerAzimuth) {
+                    GL_positions_hdl32e_11.fill(0);
+                    GL_position_index_hdl32e_11 = 0;
+                }
+                else if (9 == entriesPerAzimuth) {
+                    GL_positions_hdl32e_9.fill(0);
+                    GL_position_index_hdl32e_9 = 0;
+                }
+
+                var index = 0;
+                var azimuth = startAzimuth;
+                for (var azimuthIndex = 0; azimuthIndex < numberOfAzimuths; azimuthIndex++) {
+                    for (var sensorIndex = 0; sensorIndex < entriesPerAzimuth; sensorIndex++) {
+                        var verticalAngle = 0;
+                        if (16 == entriesPerAzimuth) {
+                            verticalAngle = verticalAngles16[sensorIndex];
+                        }
+                        else if (12 == entriesPerAzimuth) {
+                            verticalAngle = verticalAngles12[sensorIndex];
+                        }
+                        else if (11 == entriesPerAzimuth) {
+                            verticalAngle = verticalAngles11[sensorIndex];
+                        }
+                        else if (9 == entriesPerAzimuth) {
+                            verticalAngle = verticalAngles9[sensorIndex];
+                        }
+
+                        var byte0 = distances.charCodeAt(index++);
+                        var byte1 = distances.charCodeAt(index++);
+                        var distance = ( ((0xff & byte0) << 8) | (0xff & byte1) ) / 100.0;
+                        if (distance > 1.0) {
+                            var xyDistance = distance * Math.cos(verticalAngle * Math.PI/180.0);
+                            var x = xyDistance * Math.sin(azimuth * Math.PI/180.0);
+                            var y = xyDistance * Math.cos(azimuth * Math.PI/180.0);
+                            var z = distance * Math.sin(verticalAngle * Math.PI/180.0);
+
+                            if (16 == entriesPerAzimuth) {
+                                if (GL_position_index_vlp16 < MAX_POINTS_vlp16-3) {
+                                    GL_positions_vlp16[GL_position_index_vlp16++] = x;
+                                    GL_positions_vlp16[GL_position_index_vlp16++] = z;
+                                    GL_positions_vlp16[GL_position_index_vlp16++] = -y;
+                                }
+                            }
+                            else if (12 == entriesPerAzimuth) {
+                                if (GL_position_index_hdl32e_12 < MAX_POINTS_hdl32e_12-3) {
+                                    GL_positions_hdl32e_12[GL_position_index_hdl32e_12++] = x;
+                                    GL_positions_hdl32e_12[GL_position_index_hdl32e_12++] = z;
+                                    GL_positions_hdl32e_12[GL_position_index_hdl32e_12++] = -y;
+                                }
+                            }
+                            else if (11 == entriesPerAzimuth) {
+                                if (GL_position_index_hdl32e_11 < MAX_POINTS_hdl32e_11-3) {
+                                    GL_positions_hdl32e_11[GL_position_index_hdl32e_11++] = x;
+                                    GL_positions_hdl32e_11[GL_position_index_hdl32e_11++] = z;
+                                    GL_positions_hdl32e_11[GL_position_index_hdl32e_11++] = -y;
+                                }
+                            }
+                            else if (9 == entriesPerAzimuth) {
+                                if (GL_position_index_hdl32e_9 < MAX_POINTS_hdl32e_9-3) {
+                                    GL_positions_hdl32e_9[GL_position_index_hdl32e_9++] = x;
+                                    GL_positions_hdl32e_9[GL_position_index_hdl32e_9++] = z;
+                                    GL_positions_hdl32e_9[GL_position_index_hdl32e_9++] = -y;
+                                }
+                            }
+                        }
+                    }
+                    azimuth += azimuthIncrement;
+                }
+
+                // Trigger update
+                if (16 == entriesPerAzimuth) {
+                    particles_pointcloud_vlp16.geometry.attributes.position.needsUpdate = true;
+                }
+                else if (12 == entriesPerAzimuth) {
+                    particles_pointcloud_hdl32e_12.geometry.attributes.position.needsUpdate = true;
+                }
+                else if (11 == entriesPerAzimuth) {
+                    particles_pointcloud_hdl32e_11.geometry.attributes.position.needsUpdate = true;
+                }
+                else if (9 == entriesPerAzimuth) {
+                    particles_pointcloud_hdl32e_9.geometry.attributes.position.needsUpdate = true;
+                }
+            }
+        };
+
+        ws.onclose = function() {
+            console.log("Connection is closed...");
+            document.getElementById("connectionStatusText").style.color = "#555";
+            document.getElementById("connectionStatusSymbol").style.color = "#555";
+            document.getElementById("connectionStatusText").innerHTML = "disconnected";
+        };
+
+    }
+    else {
+        // The browser doesn't support WebSocket
+        console.log("WebSocket NOT supported by your Browser!");
+    }
+</script>
+
+
+</body>
+</html>
+
